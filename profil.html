@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Profil — SIMPELM</title>
+<link rel="stylesheet" href="assets/css/app.css" />
+</head>
+<body>
+<header id="navbar"></header>
+
+<section class="page-head">
+  <div class="container">
+    <span class="kicker">Akun Saya</span>
+    <h1>Profil Pengguna</h1>
+  </div>
+</section>
+
+<main class="page-body">
+  <div class="container narrow">
+    <div class="card">
+      <h2 style="color:var(--navy);font-size:18px;margin-bottom:16px">Informasi Akun</h2>
+      <div id="info"></div>
+    </div>
+
+    <div class="card">
+      <h2 style="color:var(--navy);font-size:18px;margin-bottom:16px">Ganti Password</h2>
+      <form id="pwForm">
+        <div class="field"><label>Password Lama <span class="req">*</span></label><input type="password" id="oldPassword" required /></div>
+        <div class="field"><label>Password Baru <span class="req">*</span></label><input type="password" id="newPassword" required /><div class="hint">Minimal 8 karakter.</div></div>
+        <div class="field"><label>Konfirmasi Password Baru <span class="req">*</span></label><input type="password" id="confirm" required /></div>
+        <button type="submit" class="btn btn-primary">Simpan Password Baru</button>
+      </form>
+    </div>
+  </div>
+</main>
+
+<footer id="footer"></footer>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+  const sess = requireAuth();
+  if (sess) {
+    document.addEventListener("DOMContentLoaded", () => {
+      const R = CONFIG.ROLES[sess.role] || { label: sess.role };
+      document.getElementById("info").innerHTML = `
+        <div style="display:grid;gap:10px">
+          <div><b>Nama:</b> ${escapeHtml(sess.nama || "-")}</div>
+          <div><b>Username:</b> ${escapeHtml(sess.username || "-")}</div>
+          <div><b>Peran:</b> <span class="role-badge ${R.badge}">${R.label}</span></div>
+          ${sess.kecamatan ? `<div><b>Kecamatan:</b> ${escapeHtml(sess.kecamatan)}</div>` : ""}
+          ${sess.sekolah ? `<div><b>Sekolah:</b> ${escapeHtml(sess.sekolah)}</div>` : ""}
+        </div>`;
+      document.getElementById("pwForm").addEventListener("submit", changePw);
+    });
+  }
+
+  async function changePw(e) {
+    e.preventDefault();
+    const oldPassword = document.getElementById("oldPassword").value;
+    const newPassword = document.getElementById("newPassword").value;
+    const confirm = document.getElementById("confirm").value;
+    if (newPassword.length < 8) return UI.toast("Password baru minimal 8 karakter.", "error");
+    if (newPassword !== confirm) return UI.toast("Konfirmasi password tidak cocok.", "error");
+    UI.loading(true);
+    try {
+      await API.call("changePassword", { oldPassword, newPassword }, { auth: true });
+      UI.toast("Password berhasil diganti.", "success");
+      document.getElementById("pwForm").reset();
+    } catch (err) { UI.toast(err.message, "error", 4000); }
+    finally { UI.loading(false); }
+  }
+</script>
+</body>
+</html>

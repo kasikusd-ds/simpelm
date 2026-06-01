@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pendampingan Satuan Pendidikan — SIMPELM</title>
+<link rel="stylesheet" href="assets/css/app.css" />
+</head>
+<body>
+<header id="navbar"></header>
+
+<section class="page-head" style="--ph:var(--m2);">
+  <div class="container">
+    <span class="kicker">Modul 2</span>
+    <h1>Pendampingan Satuan Pendidikan</h1>
+    <p>Dokumentasi kunjungan pendampingan implementasi Pembelajaran Mendalam ke sekolah oleh Pengawas / Ketua KKG Kecamatan.</p>
+  </div>
+</section>
+
+<main class="page-body">
+  <div class="container">
+    <div class="toolbar">
+      <div class="grow"><label>Cari</label><input type="search" id="search" placeholder="Cari sekolah, pengawas…" /></div>
+      <div><label>Kecamatan</label><select id="fKec"><option value="">Semua</option></select></div>
+      <div><label>Dari Tanggal</label><input type="date" id="fFrom" /></div>
+      <div><label>Sampai Tanggal</label><input type="date" id="fTo" /></div>
+      <button class="btn btn-gold hidden" id="btnAdd">+ Laporan Pendampingan</button>
+    </div>
+    <div id="table"></div>
+  </div>
+</main>
+
+<footer id="footer"></footer>
+
+<!-- Modal Detail -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Detail Pendampingan</h3><button class="modal-close" data-close>&times;</button></div>
+    <div class="modal-body" id="dBody"></div>
+  </div>
+</div>
+
+<!-- Modal Form -->
+<div class="modal-overlay" id="formModal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="fTitle">Laporan Pendampingan</h3><button class="modal-close" data-close>&times;</button></div>
+    <form id="form">
+      <div class="modal-body">
+        <input type="hidden" id="id" />
+        <div class="form-grid">
+          <div class="field"><label>Tanggal Kunjungan <span class="req">*</span></label><input type="date" id="tanggal_kunjungan" required /></div>
+          <div class="field"><label>Nama Sekolah <span class="req">*</span></label><select id="nama_sekolah" required><option value="">Pilih sekolah…</option></select></div>
+        </div>
+        <div class="field"><label>Kecamatan</label><input id="kecamatan" readonly style="background:#f6f8fb" /><div class="hint">Terisi otomatis dari sekolah yang dipilih.</div></div>
+        <div class="field"><label>Catatan Hasil Pendampingan <span class="req">*</span></label><textarea id="catatan_pendampingan" maxlength="1000" placeholder="Temuan, hasil, dan rekomendasi…" required></textarea></div>
+        <div class="field"><label>Link Dokumentasi (Foto)</label><input id="link_dokumentasi" placeholder="https://drive.google.com/…" /><div class="hint">Link folder Google Drive (opsional).</div></div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost btn-sm" data-close>Batal</button>
+        <button type="submit" class="btn btn-primary btn-sm">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+  let all = [], sekolahList = [];
+  const role = Session.role();
+  const canInput = ["pengawas", "super_admin"].includes(role);
+  const isAdmin = ["admin", "super_admin"].includes(role);
+
+  document.addEventListener("DOMContentLoaded", () => {
+    if (canInput) document.getElementById("btnAdd").classList.remove("hidden");
+    setupModals();
+    ["search","fKec","fFrom","fTo"].forEach(id => document.getElementById(id).addEventListener("input", render));
+    document.getElementById("btnAdd").addEventListener("click", () => openForm());
+    document.getElementById("nama_sekolah").addEventListener("change", autoKec);
+    document.getElementById("form").addEventListener("submit", save);
+    load();
+    if (canInput) loadSekolah();
+  });
+
+  async function load() {
+    UI.loading(true);
+    try {
+      all = await API.call("listPendampingan", {}, { auth: Session.isLoggedIn(), cacheMinutes: Session.isLoggedIn()?0:CONFIG.PUBLIC_CACHE_MINUTES });
+      const kecs = [...new Set(all.map(r => r.kecamatan).filter(Boolean))].sort();
+      document.getElementById("fKec").innerHTML = '<option value="">Semua</option>' + kecs.map(k=>`<option>${escapeHtml(k)}</option>`).join("");
+      render();
+    } catch (err) { UI.toast(err.message, "error", 4000); }
+    finally { UI.loading(false); }
+  }
+
+  async function loadSekolah() {
+    try {
+      const sess = Session.get();
+      sekolahList = await API.call("listSekolah", sess.kecamatan ? { kecamatan: sess.kecamatan } : {});
+      document.getElementById("nama_sekolah").innerHTML = '<option value="">Pilih sekolah…</option>' +
+        sekolahList.map(s => `<option value="${escapeHtml(s.nama_sekolah)}" data-kec="${escapeHtml(s.kecamatan)}">${escapeHtml(s.nama_sekolah)}</option>`).join("");
+    } catch (_) {}
+  }
+
+  function render() {
+    const q = document.getElementById("search").value.toLowerCase().trim();
+    const kec = document.getElementById("fKec").value;
+    const from = document.getElementById("fFrom").value, to = document.getElementById("fTo").value;
+    let rows = all.filter(r => {
+      if (q && !(`${r.nama_sekolah} ${r.nama_pengawas} ${r.kecamatan}`.toLowerCase().includes(q))) return false;
+      if (kec && r.kecamatan !== kec) return false;
+      const d = String(r.tanggal_kunjungan).slice(0,10);
+      if (from && d < from) return false;
+      if (to && d > to) return false;
+      return true;
+    });
+
+    const cols = [
+      { key: "tanggal_kunjungan", label: "Tanggal", render: r => fmtDate(r.tanggal_kunjungan) },
+      { key: "kecamatan", label: "Kecamatan" },
+      { key: "nama_sekolah", label: "Nama Sekolah" },
+      { key: "nama_pengawas", label: "Pengawas" },
+      { key: "_act", label: "Aksi", render: r => {
+          let b = `<button class="btn btn-ghost btn-sm" data-detail="${r.id}" ${r.hasDetail?"":"disabled title='Catatan tidak tampil untuk publik'"}>Lihat</button>`;
+          if (r.canEdit) b += ` <button class="btn btn-ghost btn-sm" data-edit="${r.id}">Edit</button>`;
+          if (isAdmin) b += ` <button class="btn btn-danger btn-sm" data-del="${r.id}">Hapus</button>`;
+          return `<div class="table-actions">${b}</div>`;
+        } }
+    ];
+    new DataTable({ mount: "#table", columns: cols, rows, searchKeys: ["nama_sekolah","nama_pengawas","kecamatan"], emptyText: "Belum ada laporan pendampingan." });
+
+    const t = document.getElementById("table");
+    t.querySelectorAll("[data-detail]").forEach(el=>el.onclick=()=>openDetail(el.dataset.detail));
+    t.querySelectorAll("[data-edit]").forEach(el=>el.onclick=()=>openForm(el.dataset.edit));
+    t.querySelectorAll("[data-del]").forEach(el=>el.onclick=()=>del(el.dataset.del));
+  }
+
+  function openDetail(id) {
+    const r = all.find(x => x.id == id);
+    document.getElementById("dBody").innerHTML = `
+      <div class="meta" style="font-size:13px;color:#5b6876;display:flex;gap:8px 18px;flex-wrap:wrap;margin-bottom:14px">
+        <span>📅 <b>${fmtDate(r.tanggal_kunjungan)}</b></span>
+        <span>🏫 ${escapeHtml(r.nama_sekolah)}</span>
+        <span>📍 ${escapeHtml(r.kecamatan)}</span>
+        <span>👤 ${escapeHtml(r.nama_pengawas)}</span>
+      </div>
+      <p style="font-size:14.5px;color:#3d4a57;white-space:pre-wrap;margin-bottom:16px">${escapeHtml(r.catatan_pendampingan || "(tidak ada catatan)")}</p>
+      <div class="link-row">${linkPill(r.link_dokumentasi, "📷 Lihat Dokumentasi")}</div>`;
+    show("detailModal");
+  }
+
+  function autoKec() {
+    const opt = document.getElementById("nama_sekolah").selectedOptions[0];
+    document.getElementById("kecamatan").value = opt ? (opt.dataset.kec || "") : "";
+  }
+
+  function openForm(id) {
+    const f = document.getElementById("form"); f.reset();
+    document.getElementById("id").value = "";
+    document.getElementById("fTitle").textContent = id ? "Edit Laporan Pendampingan" : "Laporan Pendampingan";
+    if (id) {
+      const r = all.find(x => x.id == id);
+      document.getElementById("id").value = r.id;
+      document.getElementById("tanggal_kunjungan").value = String(r.tanggal_kunjungan).slice(0,10);
+      document.getElementById("nama_sekolah").value = r.nama_sekolah;
+      document.getElementById("kecamatan").value = r.kecamatan;
+      document.getElementById("catatan_pendampingan").value = r.catatan_pendampingan || "";
+      document.getElementById("link_dokumentasi").value = r.link_dokumentasi || "";
+    }
+    show("formModal");
+  }
+
+  async function save(e) {
+    e.preventDefault();
+    const data = {
+      id: document.getElementById("id").value,
+      tanggal_kunjungan: document.getElementById("tanggal_kunjungan").value,
+      nama_sekolah: document.getElementById("nama_sekolah").value,
+      kecamatan: document.getElementById("kecamatan").value,
+      catatan_pendampingan: document.getElementById("catatan_pendampingan").value.trim(),
+      link_dokumentasi: document.getElementById("link_dokumentasi").value.trim()
+    };
+    if (data.link_dokumentasi && !isValidUrl(data.link_dokumentasi)) return UI.toast("Link harus diawali https://", "error");
+    UI.loading(true);
+    try {
+      await API.call("savePendampingan", { data }, { auth: true });
+      API.invalidate(); hideAll(); UI.toast("Laporan tersimpan.", "success"); await load();
+    } catch (err) { UI.toast(err.message, "error", 4000); }
+    finally { UI.loading(false); }
+  }
+
+  async function del(id) {
+    const r = all.find(x => x.id == id);
+    if (!(await UI.confirm(`Hapus laporan pendampingan ${r.nama_sekolah}?`))) return;
+    UI.loading(true);
+    try { await API.call("deletePendampingan", { id }, { auth: true }); API.invalidate(); UI.toast("Laporan dihapus.", "success"); await load(); }
+    catch (err) { UI.toast(err.message, "error", 4000); }
+    finally { UI.loading(false); }
+  }
+
+  function show(id){ document.getElementById(id).classList.add("show"); }
+  function hideAll(){ document.querySelectorAll(".modal-overlay").forEach(m=>m.classList.remove("show")); }
+  function setupModals(){
+    document.querySelectorAll("[data-close]").forEach(b=>b.onclick=hideAll);
+    document.querySelectorAll(".modal-overlay").forEach(ov=>ov.addEventListener("click",e=>{if(e.target===ov)hideAll();}));
+  }
+</script>
+</body>
+</html>

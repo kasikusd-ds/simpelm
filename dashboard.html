@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard — SIMPELM</title>
+<link rel="stylesheet" href="assets/css/app.css" />
+</head>
+<body>
+<header id="navbar"></header>
+
+<section class="page-head" style="--ph:var(--dash);">
+  <div class="container">
+    <span class="kicker">Ringkasan Implementasi PM</span>
+    <h1>Dashboard</h1>
+    <p>Statistik real-time implementasi Pembelajaran Mendalam di Kabupaten Deli Serdang, ditarik langsung dari Google Sheets.</p>
+  </div>
+</section>
+
+<main class="page-body">
+  <div class="container">
+    <div class="stat-grid" id="statGrid">
+      <!-- diisi via JS -->
+    </div>
+
+    <div class="sec-title"><h2>5 Aktivitas Terbaru</h2><span class="sub">Lintas seluruh modul</span></div>
+    <div id="recentTable"></div>
+  </div>
+</main>
+
+<footer id="footer"></footer>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+  const sess = requireAuth(["admin", "super_admin"]);
+  if (sess) load();
+
+  const CARDS = [
+    { key: "totalBimtek",         label: "Total Kegiatan Bimtek",      color: "var(--m1)", soft: "#e7f0f8" },
+    { key: "sekolahDidampingi",   label: "Sekolah Didampingi",         color: "var(--m2)", soft: "#e6f2eb" },
+    { key: "rayonAktif",          label: "Rayon KKG Aktif",            color: "var(--m3)", soft: "#fdf0e3" },
+    { key: "modulTerupload",      label: "Modul Ajar Terupload",       color: "var(--m4)", soft: "#f1e8f5" },
+    { key: "pendampinganBulanIni",label: "Pendampingan Bulan Ini",     color: "var(--dash)", soft: "#e7eef6" }
+  ];
+
+  async function load() {
+    UI.loading(true);
+    try {
+      const d = await API.call("getDashboardStats", {}, { auth: true });
+      document.getElementById("statGrid").innerHTML = CARDS.map(c => `
+        <div class="stat-card" style="--sc:${c.color};--sc-soft:${c.soft}">
+          <div class="num">${d.stats[c.key] ?? 0}</div>
+          <div class="lbl">${c.label}</div>
+        </div>`).join("");
+
+      const mount = document.getElementById("recentTable");
+      if (!d.recent.length) { mount.innerHTML = emptyStateHTML("Belum ada aktivitas tercatat."); return; }
+      const chipMap = { "Bimtek": "chip-blue", "Pendampingan": "chip-green", "KKG Daring": "chip-orange", "Modul Ajar": "chip-purple" };
+      new DataTable({
+        mount,
+        columns: [
+          { key: "tanggal", label: "Tanggal", render: r => fmtDate(r.tanggal) },
+          { key: "modul", label: "Modul", render: r => `<span class="chip ${chipMap[r.modul] || "chip-gray"}">${escapeHtml(r.modul)}</span>` },
+          { key: "deskripsi", label: "Deskripsi" }
+        ],
+        rows: d.recent,
+        pageSize: 5
+      });
+    } catch (err) { UI.toast(err.message, "error", 4000); }
+    finally { UI.loading(false); }
+  }
+</script>
+</body>
+</html>

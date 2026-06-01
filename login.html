@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Masuk — SIMPELM</title>
+<link rel="stylesheet" href="assets/css/app.css" />
+</head>
+<body>
+<div class="auth-wrap">
+  <form class="auth-card" id="loginForm" autocomplete="on">
+    <a href="index.html" class="brand">
+      <span class="brand-logo">SP</span>
+      <span class="brand-text"><strong>SIMPELM</strong><span>Dinas Pendidikan Kab. Deli Serdang</span></span>
+    </a>
+    <h2>Masuk ke Sistem</h2>
+    <p class="sub">Khusus pengelola: Admin Dinas, Pengawas, &amp; Ketua KKG</p>
+
+    <div class="field">
+      <label for="username">Username <span class="req">*</span></label>
+      <input type="text" id="username" name="username" placeholder="contoh: pengawas.percut" required autofocus />
+    </div>
+    <div class="field">
+      <label for="password">Password <span class="req">*</span></label>
+      <input type="password" id="password" name="password" placeholder="Masukkan password" required />
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-block" id="btnSubmit">Masuk</button>
+
+    <p class="auth-foot">
+      Hanya ingin melihat informasi publik?<br />
+      <a href="index.html">Kembali ke Beranda</a>
+    </p>
+  </form>
+</div>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+  UI.init();
+  // Jika sudah login, langsung arahkan
+  if (Session.isLoggedIn()) redirectByRole(Session.role());
+
+  document.getElementById("loginForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("btnSubmit");
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value;
+    if (!username || !password) return;
+
+    btn.disabled = true; btn.textContent = "Memproses…"; UI.loading(true);
+    try {
+      const data = await API.call("login", { username, password });
+      Session.set(data);
+      UI.toast("Berhasil masuk. Selamat datang, " + (data.nama || username) + "!", "success");
+      setTimeout(() => {
+        const next = qs("next");
+        if (next) location.href = next;
+        else redirectByRole(data.role);
+      }, 500);
+    } catch (err) {
+      UI.toast(err.message, "error", 4000);
+      btn.disabled = false; btn.textContent = "Masuk";
+    } finally { UI.loading(false); }
+  });
+
+  function redirectByRole(role) {
+    if (role === "admin" || role === "super_admin") location.href = "dashboard.html";
+    else if (role === "pengawas") location.href = "pendampingan.html";
+    else if (role === "kkg_sekolah") location.href = "modul-ajar.html";
+    else location.href = "index.html";
+  }
+</script>
+</body>
+</html>

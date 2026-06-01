@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Modul Ajar PM — SIMPELM</title>
+<link rel="stylesheet" href="assets/css/app.css" />
+</head>
+<body>
+<header id="navbar"></header>
+
+<section class="page-head" style="--ph:var(--m4);">
+  <div class="container">
+    <span class="kicker">Modul 4</span>
+    <h1>Modul Ajar Pembelajaran Mendalam</h1>
+    <p>Repositori modul ajar PM karya tim KKG Sekolah se-Deli Serdang — praktik pedagogis, pemanfaatan digital, modul ajar, dan asesmen sumatif.</p>
+  </div>
+</section>
+
+<main class="page-body">
+  <div class="container">
+
+    <!-- Panel KKG Sekolah: Tim & Laporan -->
+    <div id="ownerPanel" class="hidden">
+      <div class="sec-title">
+        <h2>Tim KKG Sekolah Saya</h2>
+        <button class="btn btn-gold btn-sm" id="btnAddTim">+ Tambah Tim</button>
+      </div>
+      <div id="timList" class="grid-2"></div>
+
+      <div class="sec-title" style="margin-top:34px;">
+        <h2>Laporan Modul Ajar</h2>
+        <button class="btn btn-primary btn-sm" id="btnAddLaporan">+ Buat Laporan</button>
+      </div>
+    </div>
+
+    <!-- Daftar laporan publik -->
+    <div class="sec-title" id="pubTitle"><h2>Daftar Laporan Modul Ajar PM</h2><span class="sub">Referensi untuk seluruh guru</span></div>
+    <div class="toolbar">
+      <div class="grow"><label>Cari</label><input type="search" id="search" placeholder="Cari sekolah, mapel…" /></div>
+      <div><label>Kelas</label><select id="fKelas"><option value="">Semua</option></select></div>
+      <div><label>Mata Pelajaran</label><select id="fMapel"><option value="">Semua</option></select></div>
+      <div><label>Semester</label><select id="fSem"><option value="">Semua</option></select></div>
+    </div>
+    <div id="table"></div>
+  </div>
+</main>
+
+<footer id="footer"></footer>
+
+<!-- Modal Tim -->
+<div class="modal-overlay" id="timModal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="timTitle">Tambah Tim KKG Sekolah</h3><button class="modal-close" data-close>&times;</button></div>
+    <form id="timForm">
+      <div class="modal-body">
+        <input type="hidden" id="t_id" />
+        <div class="form-grid">
+          <div class="field"><label>Kelas <span class="req">*</span></label><select id="t_kelas" required></select></div>
+          <div class="field"><label>Mata Pelajaran <span class="req">*</span></label><select id="t_mapel" required></select></div>
+        </div>
+        <div class="field"><label>Nama Tim <span class="req">*</span></label><input id="t_nama_tim" placeholder="Tim Kelas 4 Matematika" required /></div>
+        <div class="field"><label>Tujuan Pembelajaran <span class="req">*</span></label><textarea id="t_tujuan" maxlength="500" placeholder="Sesuai arahan Ketua KKG Kec / Pengawas…" required></textarea></div>
+      </div>
+      <div class="modal-foot"><button type="button" class="btn btn-ghost btn-sm" data-close>Batal</button><button type="submit" class="btn btn-primary btn-sm">Simpan Tim</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Laporan -->
+<div class="modal-overlay" id="lapModal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="lapTitle">Buat Laporan Modul Ajar</h3><button class="modal-close" data-close>&times;</button></div>
+    <form id="lapForm">
+      <div class="modal-body">
+        <input type="hidden" id="l_id" />
+        <div class="field"><label>Tim <span class="req">*</span></label><select id="l_tim_id" required><option value="">Pilih tim…</option></select><div class="hint">Daftarkan tim terlebih dahulu jika belum ada.</div></div>
+        <div class="form-grid">
+          <div class="field"><label>Semester <span class="req">*</span></label><select id="l_semester" required></select></div>
+          <div class="field"><label>Tahun Ajaran <span class="req">*</span></label><input id="l_tahun_ajaran" placeholder="2026/2027" required /></div>
+        </div>
+        <div class="field"><label>Deskripsi Praktik Pedagogis <span class="req">*</span></label><textarea id="l_pedagogis" maxlength="500" placeholder="Strategi/metode PM: PjBL, Inkuiri, CTL…" required></textarea></div>
+        <div class="field"><label>Deskripsi Pemanfaatan Digital <span class="req">*</span></label><textarea id="l_digital" maxlength="500" placeholder="Platform/tools digital dalam PM…" required></textarea></div>
+        <div class="field"><label>Link Modul Ajar / RPP <span class="req">*</span></label><input id="l_modul" placeholder="https://docs.google.com/…" required /></div>
+        <div class="field"><label>Link Asesmen Sumatif</label><input id="l_asesmen" placeholder="https://forms.gle/… (opsional)" /></div>
+      </div>
+      <div class="modal-foot"><button type="button" class="btn btn-ghost btn-sm" data-close>Batal</button><button type="submit" class="btn btn-primary btn-sm">Simpan Laporan</button></div>
+    </form>
+  </div>
+</div>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+  let laporan = [], tim = [];
+  const sess = Session.get();
+  const isOwner = sess && sess.role === "kkg_sekolah";
+
+  document.addEventListener("DOMContentLoaded", () => {
+    setupModals();
+    document.getElementById("t_kelas").innerHTML = optionList(CONFIG.KELAS);
+    document.getElementById("t_mapel").innerHTML = optionList(CONFIG.MAPEL);
+    document.getElementById("l_semester").innerHTML = optionList(CONFIG.SEMESTER);
+    document.getElementById("fKelas").innerHTML = '<option value="">Semua</option>' + optionList(CONFIG.KELAS);
+    document.getElementById("fMapel").innerHTML = '<option value="">Semua</option>' + optionList(CONFIG.MAPEL);
+    document.getElementById("fSem").innerHTML = '<option value="">Semua</option>' + optionList(CONFIG.SEMESTER);
+    ["search","fKelas","fMapel","fSem"].forEach(id => document.getElementById(id).addEventListener("input", render));
+
+    if (isOwner) {
+      document.getElementById("ownerPanel").classList.remove("hidden");
+      document.getElementById("btnAddTim").onclick = () => openTim();
+      document.getElementById("btnAddLaporan").onclick = () => openLaporan();
+      loadTim();
+    }
+    document.getElementById("timForm").addEventListener("submit", saveTim);
+    document.getElementById("lapForm").addEventListener("submit", saveLaporan);
+    load();
+  });
+
+  async function load() {
+    UI.loading(true);
+    try {
+      laporan = await API.call("listLaporan", {}, { auth: Session.isLoggedIn(), cacheMinutes: Session.isLoggedIn()?0:CONFIG.PUBLIC_CACHE_MINUTES });
+      render();
+    } catch (err) { UI.toast(err.message, "error", 4000); }
+    finally { UI.loading(false); }
+  }
+
+  async function loadTim() {
+    try {
+      tim = await API.call("listTim", { sekolah: sess.sekolah }, { auth: true });
+      renderTim();
+      document.getElementById("l_tim_id").innerHTML = '<option value="">Pilih tim…</option>' +
+        tim.map(t => `<option value="${t.id}">${escapeHtml(t.nama_tim)} (${escapeHtml(t.kelas)} ${escapeHtml(t.mata_pelajaran)})</option>`).join("");
+    } catch (err) { UI.toast(err.message, "error"); }
+  }
+
+  function renderTim() {
+    const host = document.getElementById("timList");
+    if (!tim.length) { host.innerHTML = emptyStateHTML("Belum ada tim", "Tambahkan tim KKG sekolah Anda untuk mulai melapor."); return; }
+    host.innerHTML = tim.map(t => `
+      <article class="list-card" style="--lc:var(--m4)">
+        <h3>${escapeHtml(t.nama_tim)}</h3>
+        <div class="meta"><span class="chip chip-purple">${escapeHtml(t.kelas)}</span><span class="chip chip-gray">${escapeHtml(t.mata_pelajaran)}</span></div>
+        <p class="desc">${escapeHtml(t.tujuan_pembelajaran || "")}</p>
+        <div class="link-row"><button class="link-pill" data-edit-tim="${t.id}">Edit Tim</button></div>
+      </article>`).join("");
+    host.querySelectorAll("[data-edit-tim]").forEach(el => el.onclick = () => openTim(el.dataset.editTim));
+  }
+
+  function render() {
+    const q = document.getElementById("search").value.toLowerCase().trim();
+    const kelas = document.getElementById("fKelas").value, mapel = document.getElementById("fMapel").value, sem = document.getElementById("fSem").value;
+    let rows = laporan.filter(r => {
+      if (q && !(`${r.sekolah} ${r.mapel} ${r.kelas}`.toLowerCase().includes(q))) return false;
+      if (kelas && r.kelas !== kelas) return false;
+      if (mapel && r.mapel !== mapel) return false;
+      if (sem && r.semester !== sem) return false;
+      return true;
+    });
+    const cols = [
+      { key: "sekolah", label: "Sekolah" },
+      { key: "kelas", label: "Kelas" },
+      { key: "mapel", label: "Mapel" },
+      { key: "semester", label: "Semester", render: r => `${escapeHtml(r.semester)}<br><span class="text-muted" style="font-size:12px">${escapeHtml(r.tahun_ajaran||"")}</span>` },
+      { key: "_links", label: "Modul & Asesmen", render: r => `<div class="link-row">${linkPill(r.link_modul_ajar,"📘 Modul")}${linkPill(r.link_asesmen_sumatif,"📝 Asesmen")}${r.canEdit?`<button class="link-pill" data-edit-lap="${r.id}">Edit</button>`:""}</div>` }
+    ];
+    new DataTable({ mount: "#table", columns: cols, rows, emptyText: "Belum ada laporan modul ajar." });
+    document.getElementById("table").querySelectorAll("[data-edit-lap]").forEach(el => el.onclick = () => openLaporan(el.dataset.editLap));
+  }
+
+  /* ---- Tim ---- */
+  function openTim(id) {
+    document.getElementById("timForm").reset();
+    document.getElementById("t_id").value = "";
+    document.getElementById("timTitle").textContent = id ? "Edit Tim" : "Tambah Tim KKG Sekolah";
+    if (id) {
+      const t = tim.find(x => x.id == id);
+      document.getElementById("t_id").value = t.id;
+      document.getElementById("t_kelas").value = t.kelas;
+      document.getElementById("t_mapel").value = t.mata_pelajaran;
+      document.getElementById("t_nama_tim").value = t.nama_tim;
+      document.getElementById("t_tujuan").value = t.tujuan_pembelajaran;
+    }
+    show("timModal");
+  }
+  async function saveTim(e) {
+    e.preventDefault();
+    const data = {
+      id: document.getElementById("t_id").value,
+      kelas: document.getElementById("t_kelas").value,
+      mata_pelajaran: document.getElementById("t_mapel").value,
+      nama_tim: document.getElementById("t_nama_tim").value.trim(),
+      tujuan_pembelajaran: document.getElementById("t_tujuan").value.trim()
+    };
+    UI.loading(true);
+    try { await API.call("saveTim", { data }, { auth: true }); hideAll(); UI.toast("Tim tersimpan.", "success"); await loadTim(); }
+    catch (err) { UI.toast(err.message, "error", 4000); }
+    finally { UI.loading(false); }
+  }
+
+  /* ---- Laporan ---- */
+  function openLaporan(id) {
+    if (!tim.length) return UI.toast("Daftarkan tim terlebih dahulu.", "info");
+    document.getElementById("lapForm").reset();
+    document.getElementById("l_id").value = "";
+    document.getElementById("lapTitle").textContent = id ? "Edit Laporan" : "Buat Laporan Modul Ajar";
+    if (id) {
+      const r = laporan.find(x => x.id == id);
+      document.getElementById("l_id").value = r.id;
+      document.getElementById("l_tim_id").value = r.tim_id;
+      document.getElementById("l_semester").value = r.semester;
+      document.getElementById("l_tahun_ajaran").value = r.tahun_ajaran;
+      document.getElementById("l_pedagogis").value = r.deskripsi_praktik_pedagogis;
+      document.getElementById("l_digital").value = r.deskripsi_digital;
+      document.getElementById("l_modul").value = r.link_modul_ajar;
+      document.getElementById("l_asesmen").value = r.link_asesmen_sumatif;
+    }
+    show("lapModal");
+  }
+  async function saveLaporan(e) {
+    e.preventDefault();
+    const data = {
+      id: document.getElementById("l_id").value,
+      tim_id: document.getElementById("l_tim_id").value,
+      semester: document.getElementById("l_semester").value,
+      tahun_ajaran: document.getElementById("l_tahun_ajaran").value.trim(),
+      deskripsi_praktik_pedagogis: document.getElementById("l_pedagogis").value.trim(),
+      deskripsi_digital: document.getElementById("l_digital").value.trim(),
+      link_modul_ajar: document.getElementById("l_modul").value.trim(),
+      link_asesmen_sumatif: document.getElementById("l_asesmen").value.trim()
+    };
+    if (!isValidUrl(data.link_modul_ajar)) return UI.toast("Link Modul Ajar harus diawali https://", "error");
+    if (data.link_asesmen_sumatif && !isValidUrl(data.link_asesmen_sumatif)) return UI.toast("Link Asesmen harus diawali https://", "error");
+    UI.loading(true);
+    try { await API.call("saveLaporan", { data }, { auth: true }); API.invalidate(); hideAll(); UI.toast("Laporan tersimpan.", "success"); await load(); }
+    catch (err) { UI.toast(err.message, "error", 4000); }
+    finally { UI.loading(false); }
+  }
+
+  function show(id){ document.getElementById(id).classList.add("show"); }
+  function hideAll(){ document.querySelectorAll(".modal-overlay").forEach(m=>m.classList.remove("show")); }
+  function setupModals(){
+    document.querySelectorAll("[data-close]").forEach(b=>b.onclick=hideAll);
+    document.querySelectorAll(".modal-overlay").forEach(ov=>ov.addEventListener("click",e=>{if(e.target===ov)hideAll();}));
+  }
+</script>
+</body>
+</html>

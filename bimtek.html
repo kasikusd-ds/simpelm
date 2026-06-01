@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bimtek &amp; Workshop PM — SIMPELM</title>
+<link rel="stylesheet" href="assets/css/app.css" />
+</head>
+<body>
+<header id="navbar"></header>
+
+<section class="page-head" style="--ph:var(--m1);">
+  <div class="container">
+    <span class="kicker">Modul 1</span>
+    <h1>Bimtek &amp; Workshop PM</h1>
+    <p>Informasi kegiatan Bimbingan Teknis dan Workshop implementasi Pembelajaran Mendalam yang diselenggarakan Dinas Pendidikan Kabupaten Deli Serdang.</p>
+  </div>
+</section>
+
+<main class="page-body">
+  <div class="container">
+    <div class="toolbar">
+      <div class="grow">
+        <label>Cari kegiatan</label>
+        <input type="search" id="search" placeholder="Ketik judul atau penyelenggara…" />
+      </div>
+      <div>
+        <label>Tahun</label>
+        <select id="fYear"><option value="">Semua</option></select>
+      </div>
+      <div>
+        <label>Bulan</label>
+        <select id="fMonth"><option value="">Semua</option></select>
+      </div>
+      <button class="btn btn-gold hidden" id="btnAdd">+ Tambah Kegiatan</button>
+    </div>
+
+    <div class="grid-2" id="cards"></div>
+  </div>
+</main>
+
+<footer id="footer"></footer>
+
+<!-- Modal Detail -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="dTitle"></h3><button class="modal-close" data-close>&times;</button></div>
+    <div class="modal-body" id="dBody"></div>
+  </div>
+</div>
+
+<!-- Modal Form (Admin) -->
+<div class="modal-overlay" id="formModal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="fTitle">Tambah Kegiatan Bimtek</h3><button class="modal-close" data-close>&times;</button></div>
+    <form id="bimtekForm">
+      <div class="modal-body">
+        <input type="hidden" id="id" />
+        <div class="field"><label>Judul Kegiatan <span class="req">*</span></label><input id="judul_kegiatan" maxlength="150" required /></div>
+        <div class="form-grid">
+          <div class="field"><label>Tanggal Pelaksanaan <span class="req">*</span></label><input type="date" id="tanggal" required /></div>
+          <div class="field"><label>Penyelenggara <span class="req">*</span></label><input id="penyelenggara" placeholder="Dinas Pendidikan Kab. Deli Serdang" required /></div>
+        </div>
+        <div class="field"><label>Sasaran Peserta <span class="req">*</span></label><input id="sasaran" placeholder="Pengawas SD, Kepala Sekolah, Guru Kelas" required /></div>
+        <div class="field"><label>Deskripsi Kegiatan <span class="req">*</span></label><textarea id="deskripsi" maxlength="500" required></textarea></div>
+        <div class="field"><label>Link Modul</label><input id="link_modul" placeholder="https://drive.google.com/…" /><div class="hint">Link Google Drive modul materi (opsional)</div></div>
+        <div class="field"><label>Link PPT</label><input id="link_ppt" placeholder="https://…" /></div>
+        <div class="field"><label>Link Video</label><input id="link_video" placeholder="https://youtube.com/…" /></div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost btn-sm" data-close>Batal</button>
+        <button type="submit" class="btn btn-primary btn-sm">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+  let all = [], dt;
+  const isAdmin = ["admin", "super_admin"].includes(Session.role());
+
+  document.addEventListener("DOMContentLoaded", () => {
+    if (isAdmin) document.getElementById("btnAdd").classList.remove("hidden");
+    setupModals();
+    load();
+    document.getElementById("search").addEventListener("input", e => { render(); });
+    document.getElementById("fYear").addEventListener("change", render);
+    document.getElementById("fMonth").addEventListener("change", render);
+    document.getElementById("btnAdd").addEventListener("click", () => openForm());
+    document.getElementById("bimtekForm").addEventListener("submit", save);
+  });
+
+  async function load() {
+    UI.loading(true);
+    try {
+      all = await API.call("listBimtek", {}, { cacheMinutes: isAdmin ? 0 : CONFIG.PUBLIC_CACHE_MINUTES });
+      buildYearOptions();
+      render();
+    } catch (err) { UI.toast(err.message, "error", 4000); document.getElementById("cards").innerHTML = emptyStateHTML("Gagal memuat data."); }
+    finally { UI.loading(false); }
+  }
+
+  function buildYearOptions() {
+    const years = [...new Set(all.map(b => new Date(b.tanggal).getFullYear()).filter(y => !isNaN(y)))].sort((a,b)=>b-a);
+    document.getElementById("fYear").innerHTML = '<option value="">Semua</option>' + years.map(y => `<option>${y}</option>`).join("");
+    const months = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+    document.getElementById("fMonth").innerHTML = '<option value="">Semua</option>' + months.map((m,i) => `<option value="${i}">${m}</option>`).join("");
+  }
+
+  function render() {
+    const q = document.getElementById("search").value.toLowerCase().trim();
+    const y = document.getElementById("fYear").value;
+    const m = document.getElementById("fMonth").value;
+    let rows = all.filter(b => {
+      const d = new Date(b.tanggal);
+      if (q && !(`${b.judul_kegiatan} ${b.penyelenggara} ${b.sasaran}`.toLowerCase().includes(q))) return false;
+      if (y && d.getFullYear() != y) return false;
+      if (m !== "" && d.getMonth() != m) return false;
+      return true;
+    });
+    const host = document.getElementById("cards");
+    if (!rows.length) { host.innerHTML = emptyStateHTML("Belum ada kegiatan yang terdaftar", "Coba ubah filter pencarian."); return; }
+    host.innerHTML = rows.map(b => `
+      <article class="list-card" style="--lc:var(--m1)">
+        <h3>${escapeHtml(b.judul_kegiatan)}</h3>
+        <div class="meta">
+          <span>📅 <b>${fmtDate(b.tanggal)}</b></span>
+          <span>🎯 ${escapeHtml(b.sasaran || "-")}</span>
+        </div>
+        <p class="desc">${escapeHtml((b.deskripsi || "").slice(0, 140))}${(b.deskripsi||"").length>140?"…":""}</p>
+        <div class="link-row">
+          <button class="link-pill" data-detail="${b.id}">Lihat Detail</button>
+          ${isAdmin ? `<button class="link-pill" data-edit="${b.id}">Edit</button>
+          <button class="link-pill" data-del="${b.id}" style="background:#fdecea;color:#c0392b">Hapus</button>` : ""}
+        </div>
+      </article>`).join("");
+
+    host.querySelectorAll("[data-detail]").forEach(el => el.onclick = () => openDetail(el.dataset.detail));
+    host.querySelectorAll("[data-edit]").forEach(el => el.onclick = () => openForm(el.dataset.edit));
+    host.querySelectorAll("[data-del]").forEach(el => el.onclick = () => del(el.dataset.del));
+  }
+
+  function openDetail(id) {
+    const b = all.find(x => x.id == id);
+    document.getElementById("dTitle").textContent = b.judul_kegiatan;
+    document.getElementById("dBody").innerHTML = `
+      <div class="meta" style="font-size:13px;color:#5b6876;display:flex;gap:8px 18px;flex-wrap:wrap;margin-bottom:14px">
+        <span>📅 <b>${fmtDate(b.tanggal)}</b></span>
+        <span>🏛️ ${escapeHtml(b.penyelenggara || "-")}</span>
+        <span>🎯 ${escapeHtml(b.sasaran || "-")}</span>
+      </div>
+      <p style="font-size:14.5px;color:#3d4a57;margin-bottom:18px;white-space:pre-wrap">${escapeHtml(b.deskripsi || "")}</p>
+      <div class="link-row">
+        ${linkPill(b.link_modul, "⬇ Unduh Modul")}
+        ${linkPill(b.link_ppt, "📑 Lihat PPT")}
+        ${linkPill(b.link_video, "▶ Tonton Video")}
+        ${(!b.link_modul && !b.link_ppt && !b.link_video) ? '<span class="text-muted" style="font-size:13px">Tidak ada lampiran tautan.</span>' : ""}
+      </div>`;
+    show("detailModal");
+  }
+
+  function openForm(id) {
+    const f = document.getElementById("bimtekForm"); f.reset();
+    document.getElementById("id").value = "";
+    document.getElementById("fTitle").textContent = "Tambah Kegiatan Bimtek";
+    if (id) {
+      const b = all.find(x => x.id == id);
+      document.getElementById("fTitle").textContent = "Edit Kegiatan Bimtek";
+      ["id","judul_kegiatan","tanggal","penyelenggara","sasaran","deskripsi","link_modul","link_ppt","link_video"]
+        .forEach(k => { if (document.getElementById(k)) document.getElementById(k).value = b[k] ? (k==="tanggal"? String(b[k]).slice(0,10) : b[k]) : ""; });
+    }
+    show("formModal");
+  }
+
+  async function save(e) {
+    e.preventDefault();
+    const data = {};
+    ["id","judul_kegiatan","tanggal","penyelenggara","sasaran","deskripsi","link_modul","link_ppt","link_video"]
+      .forEach(k => data[k] = document.getElementById(k).value.trim());
+    for (const k of ["link_modul","link_ppt","link_video"])
+      if (data[k] && !isValidUrl(data[k])) return UI.toast("Link harus diawali https://", "error");
+    UI.loading(true);
+    try {
+      await API.call("saveBimtek", { data }, { auth: true });
+      API.invalidate(); hideAll(); UI.toast("Kegiatan tersimpan.", "success");
+      await load();
+    } catch (err) { UI.toast(err.message, "error", 4000); }
+    finally { UI.loading(false); }
+  }
+
+  async function del(id) {
+    const b = all.find(x => x.id == id);
+    if (!(await UI.confirm(`Hapus kegiatan "${b.judul_kegiatan}"? Tindakan ini tidak dapat dibatalkan.`))) return;
+    UI.loading(true);
+    try {
+      await API.call("deleteBimtek", { id }, { auth: true });
+      API.invalidate(); UI.toast("Kegiatan dihapus.", "success"); await load();
+    } catch (err) { UI.toast(err.message, "error", 4000); }
+    finally { UI.loading(false); }
+  }
+
+  // modal helpers
+  function show(id){ document.getElementById(id).classList.add("show"); }
+  function hideAll(){ document.querySelectorAll(".modal-overlay").forEach(m=>m.classList.remove("show")); }
+  function setupModals(){
+    document.querySelectorAll("[data-close]").forEach(b=>b.onclick=hideAll);
+    document.querySelectorAll(".modal-overlay").forEach(ov=>ov.addEventListener("click",e=>{if(e.target===ov)hideAll();}));
+  }
+</script>
+</body>
+</html>

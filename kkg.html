@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Jadwal KKG Daring — SIMPELM</title>
+<link rel="stylesheet" href="assets/css/app.css" />
+</head>
+<body>
+<header id="navbar"></header>
+
+<section class="page-head" style="--ph:var(--m3);">
+  <div class="container">
+    <span class="kicker">Modul 3</span>
+    <h1>Jadwal KKG Daring</h1>
+    <p>Jadwal belajar daring Kelompok Kerja Guru (KKG) sebagai komunitas belajar PM, terorganisir per kecamatan dan rayon — lengkap dengan tautan Google Meet.</p>
+  </div>
+</section>
+
+<main class="page-body">
+  <div class="container">
+    <div class="toolbar">
+      <div class="grow"><label>Cari kecamatan / rayon</label><input type="search" id="search" placeholder="Ketik nama kecamatan atau rayon…" /></div>
+      <button class="btn btn-gold hidden" id="btnAdd">+ Atur Jadwal Rayon</button>
+    </div>
+    <div id="list"></div>
+  </div>
+</main>
+
+<footer id="footer"></footer>
+
+<!-- Modal Form -->
+<div class="modal-overlay" id="formModal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="fTitle">Atur Jadwal KKG Rayon</h3><button class="modal-close" data-close>&times;</button></div>
+    <form id="form">
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="field"><label>Kecamatan <span class="req">*</span></label><input id="kecamatan" readonly style="background:#f6f8fb" /></div>
+          <div class="field"><label>Rayon <span class="req">*</span></label><select id="nama_rayon" required><option value="">Pilih rayon…</option></select></div>
+        </div>
+        <div class="form-grid">
+          <div class="field"><label>Hari <span class="req">*</span></label><select id="hari" required></select></div>
+          <div class="field"><label>Tema / Materi Bulan Ini</label><input id="tema_bulan_ini" placeholder="Praktik Pedagogis Inkuiri — Kelas Tinggi" /></div>
+        </div>
+        <div class="form-grid">
+          <div class="field"><label>Jam Mulai <span class="req">*</span></label><input type="time" id="jam_mulai" required /></div>
+          <div class="field"><label>Jam Selesai <span class="req">*</span></label><input type="time" id="jam_selesai" required /></div>
+        </div>
+        <div class="field"><label>Link Google Meet <span class="req">*</span></label><input id="link_gmeet" placeholder="https://meet.google.com/…" required /></div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost btn-sm" data-close>Batal</button>
+        <button type="submit" class="btn btn-primary btn-sm">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+  let data = [], rayonMaster = [];
+  const sess = Session.get();
+  const canInput = sess && ["pengawas", "super_admin"].includes(sess.role);
+
+  document.addEventListener("DOMContentLoaded", () => {
+    if (canInput) document.getElementById("btnAdd").classList.remove("hidden");
+    setupModals();
+    document.getElementById("hari").innerHTML = optionList(CONFIG.HARI);
+    document.getElementById("search").addEventListener("input", render);
+    document.getElementById("btnAdd").addEventListener("click", openForm);
+    document.getElementById("form").addEventListener("submit", save);
+    load();
+    if (canInput) loadRayon();
+  });
+
+  async function load() {
+    UI.loading(true);
+    try { data = await API.call("listKKG", {}, { cacheMinutes: CONFIG.PUBLIC_CACHE_MINUTES }); render(); }
+    catch (err) { UI.toast(err.message, "error", 4000); }
+    finally { UI.loading(false); }
+  }
+
+  async function loadRayon() {
+    try {
+      rayonMaster = await API.call("listRayon", sess.kecamatan ? { kecamatan: sess.kecamatan } : {});
+      document.getElementById("kecamatan").value = sess.kecamatan || "";
+      refreshRayonOptions();
+    } catch (_) {}
+  }
+  function refreshRayonOptions() {
+    const kec = document.getElementById("kecamatan").value;
+    const list = rayonMaster.filter(r => !kec || r.kecamatan === kec);
+    document.getElementById("nama_rayon").innerHTML = '<option value="">Pilih rayon…</option>' +
+      list.map(r => `<option value="${escapeHtml(r.rayon)}">${escapeHtml(r.rayon)}</option>`).join("");
+  }
+
+  function render() {
+    const q = document.getElementById("search").value.toLowerCase().trim();
+    const filtered = data.filter(k => !q || k.kecamatan.toLowerCase().includes(q) || k.rayon.some(r => (r.nama_rayon||"").toLowerCase().includes(q)));
+    const host = document.getElementById("list");
+    if (!filtered.length) { host.innerHTML = emptyStateHTML("Belum ada jadwal KKG", "Jadwal akan tampil setelah Ketua KKG Kecamatan mengisinya."); return; }
+    host.innerHTML = filtered.map((k, i) => `
+      <div class="accordion ${i===0?"open":""}">
+        <div class="acc-head">
+          <div><h3>${escapeHtml(k.kecamatan)}</h3><span class="acc-meta">${k.rayon.length} rayon · ${k.rayon.filter(r=>r.scheduled).length} terjadwal</span></div>
+          <svg class="caret" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5b6876" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="acc-body">
+          ${k.rayon.map(r => rayonRow(k.kecamatan, r)).join("")}
+        </div>
+      </div>`).join("");
+
+    host.querySelectorAll(".acc-head").forEach(h => h.onclick = () => h.parentElement.classList.toggle("open"));
+    host.querySelectorAll("[data-edit]").forEach(el => el.onclick = (e) => { e.stopPropagation(); openForm(el.dataset.kec, el.dataset.rayon); });
+  }
+
+  function rayonRow(kec, r) {
+    const editBtn = canInput && (sess.role==="super_admin" || sess.kecamatan===kec)
+      ? `<button class="btn btn-ghost btn-sm" data-edit data-kec="${escapeHtml(kec)}" data-rayon="${escapeHtml(r.nama_rayon)}">Atur</button>` : "";
+    if (!r.scheduled) {
+      return `<div class="rayon-row">
+        <div class="r-info"><b>${escapeHtml(r.nama_rayon)}</b><br><span class="chip chip-gray">Belum Dijadwalkan</span></div>
+        <div>${editBtn}</div></div>`;
+    }
+    return `<div class="rayon-row">
+      <div class="r-info">
+        <b>${escapeHtml(r.nama_rayon)}</b>
+        <div class="time">🗓️ ${escapeHtml(r.hari)} · ⏰ ${escapeHtml(r.jam_mulai)}–${escapeHtml(r.jam_selesai)}</div>
+        ${r.tema_bulan_ini ? `<span class="chip chip-orange" style="margin-top:6px;display:inline-block">📌 ${escapeHtml(r.tema_bulan_ini)}</span>` : ""}
+      </div>
+      <div class="link-row">
+        <a class="link-pill" style="background:var(--m3);color:#fff" href="${escapeHtml(r.link_gmeet)}" target="_blank" rel="noopener">🎥 Bergabung GMeet</a>
+        ${editBtn}
+      </div>
+    </div>`;
+  }
+
+  function openForm(kec, rayon) {
+    document.getElementById("form").reset();
+    document.getElementById("kecamatan").value = (kec && typeof kec==="string") ? kec : (sess.kecamatan || "");
+    refreshRayonOptions();
+    document.getElementById("hari").innerHTML = optionList(CONFIG.HARI);
+    if (rayon) {
+      const k = data.find(x => x.kecamatan === kec);
+      const r = k && k.rayon.find(x => x.nama_rayon === rayon);
+      document.getElementById("nama_rayon").value = rayon;
+      if (r && r.scheduled) {
+        document.getElementById("hari").value = r.hari;
+        document.getElementById("jam_mulai").value = r.jam_mulai;
+        document.getElementById("jam_selesai").value = r.jam_selesai;
+        document.getElementById("link_gmeet").value = r.link_gmeet;
+        document.getElementById("tema_bulan_ini").value = r.tema_bulan_ini || "";
+      }
+    }
+    show("formModal");
+  }
+
+  async function save(e) {
+    e.preventDefault();
+    const data2 = {
+      kecamatan: document.getElementById("kecamatan").value,
+      nama_rayon: document.getElementById("nama_rayon").value,
+      hari: document.getElementById("hari").value,
+      jam_mulai: document.getElementById("jam_mulai").value,
+      jam_selesai: document.getElementById("jam_selesai").value,
+      link_gmeet: document.getElementById("link_gmeet").value.trim(),
+      tema_bulan_ini: document.getElementById("tema_bulan_ini").value.trim()
+    };
+    if (!isValidUrl(data2.link_gmeet)) return UI.toast("Link GMeet harus diawali https://", "error");
+    UI.loading(true);
+    try { await API.call("saveKKG", { data: data2 }, { auth: true }); API.invalidate(); hideAll(); UI.toast("Jadwal tersimpan.", "success"); await load(); }
+    catch (err) { UI.toast(err.message, "error", 4000); }
+    finally { UI.loading(false); }
+  }
+
+  function show(id){ document.getElementById(id).classList.add("show"); }
+  function hideAll(){ document.querySelectorAll(".modal-overlay").forEach(m=>m.classList.remove("show")); }
+  function setupModals(){
+    document.querySelectorAll("[data-close]").forEach(b=>b.onclick=hideAll);
+    document.querySelectorAll(".modal-overlay").forEach(ov=>ov.addEventListener("click",e=>{if(e.target===ov)hideAll();}));
+  }
+</script>
+</body>
+</html>

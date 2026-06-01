@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SIMPELM — Sistem Informasi Pembelajaran Mendalam | Dinas Pendidikan Kab. Deli Serdang</title>
+<meta name="description" content="SIMPELM — Sistem Informasi Pembelajaran Mendalam Dinas Pendidikan Kabupaten Deli Serdang. Pusat informasi Bimtek, Pendampingan, Jadwal KKG Daring, dan Modul Ajar Pembelajaran Mendalam sesuai Kepmendikdasmen 126/P/2025." />
+<style>
+  :root {
+    --navy: #1A3A5C;
+    --navy-dark: #122c47;
+    --gold: #D4A017;
+    --accent: #3498DB;
+    --m1: #2E6DA4;   /* Bimtek - biru */
+    --m2: #1E6B40;   /* Pendampingan - hijau */
+    --m3: #E67E22;   /* KKG Daring - oranye */
+    --m4: #6C3483;   /* Modul Ajar - ungu */
+    --ink: #2b3440;
+    --muted: #5b6876;
+    --line: #e4e9ef;
+    --bg: #f6f8fb;
+    --white: #ffffff;
+    --radius: 16px;
+    --shadow: 0 10px 30px rgba(26, 58, 92, 0.08);
+    --shadow-hover: 0 18px 45px rgba(26, 58, 92, 0.16);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { text-decoration: none; color: inherit; }
+
+  .container {
+    width: 100%;
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  /* ---------- Navbar ---------- */
+  .navbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(26, 58, 92, 0.97);
+    backdrop-filter: blur(6px);
+    color: #fff;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.15);
+  }
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 66px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-logo {
+    width: 42px; height: 42px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--gold), #f0bd3f);
+    color: var(--navy);
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 18px;
+    letter-spacing: -.5px;
+    flex-shrink: 0;
+  }
+  .brand-text strong { display: block; font-size: 18px; letter-spacing: .5px; line-height: 1.1; }
+  .brand-text span { display: block; font-size: 11px; opacity: .8; }
+
+  .nav-links { display: flex; align-items: center; gap: 6px; }
+  .nav-links a {
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 14.5px;
+    font-weight: 500;
+    color: #e7eef6;
+    transition: background .2s, color .2s;
+  }
+  .nav-links a:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+  .btn-login {
+    background: var(--gold) !important;
+    color: var(--navy) !important;
+    font-weight: 700 !important;
+    padding: 9px 20px !important;
+    margin-left: 6px;
+  }
+  .btn-login:hover { background: #f0bd3f !important; }
+
+  .nav-toggle {
+    display: none;
+    background: none; border: none; cursor: pointer;
+    width: 42px; height: 42px;
+    flex-direction: column; justify-content: center; gap: 5px;
+  }
+  .nav-toggle span { display: block; height: 2.5px; width: 24px; background: #fff; border-radius: 2px; transition: .3s; }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    background:
+      radial-gradient(circle at 85% -10%, rgba(212, 160, 23, 0.22), transparent 45%),
+      linear-gradient(160deg, var(--navy) 0%, var(--navy-dark) 100%);
+    color: #fff;
+    padding: 80px 0 96px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: "";
+    position: absolute; left: 0; right: 0; bottom: -1px; height: 70px;
+    background: var(--bg);
+    clip-path: polygon(0 100%, 100% 100%, 100% 0);
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.15fr .85fr;
+    gap: 50px;
+    align-items: center;
+    position: relative; z-index: 2;
+  }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    padding: 7px 16px; border-radius: 999px;
+    font-size: 12.5px; font-weight: 600; letter-spacing: .4px;
+    margin-bottom: 22px;
+  }
+  .eyebrow .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); }
+  .hero h1 {
+    font-size: clamp(2rem, 4.4vw, 3.1rem);
+    line-height: 1.12;
+    font-weight: 800;
+    letter-spacing: -.5px;
+    margin-bottom: 18px;
+  }
+  .hero h1 .accent { color: var(--gold); }
+  .hero p.lead {
+    font-size: 17px;
+    color: #d3deea;
+    max-width: 560px;
+    margin-bottom: 30px;
+  }
+  .hero-cta { display: flex; flex-wrap: wrap; gap: 14px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 14px 28px;
+    border-radius: 10px;
+    font-size: 15px; font-weight: 700;
+    cursor: pointer; border: none;
+    transition: transform .15s, box-shadow .2s, background .2s;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn-primary { background: var(--gold); color: var(--navy); box-shadow: 0 8px 22px rgba(212, 160, 23, .35); }
+  .btn-primary:hover { background: #f0bd3f; }
+  .btn-ghost { background: rgba(255, 255, 255, 0.08); color: #fff; border: 1px solid rgba(255, 255, 255, 0.28); }
+  .btn-ghost:hover { background: rgba(255, 255, 255, 0.16); }
+
+  /* hero card */
+  .hero-card {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 20px;
+    padding: 26px;
+    backdrop-filter: blur(4px);
+  }
+  .hero-card h4 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--gold); margin-bottom: 16px; }
+  .mini-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .mini-stat {
+    background: rgba(255, 255, 255, 0.07);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .mini-stat .num { font-size: 26px; font-weight: 800; color: #fff; line-height: 1; }
+  .mini-stat .lbl { font-size: 12.5px; color: #c3d0de; margin-top: 6px; }
+
+  /* ---------- Section base ---------- */
+  section { padding: 76px 0; }
+  .section-head { text-align: center; max-width: 680px; margin: 0 auto 50px; }
+  .section-head .kicker {
+    color: var(--accent); font-weight: 700; font-size: 13px;
+    letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px; display: block;
+  }
+  .section-head h2 { font-size: clamp(1.6rem, 3vw, 2.2rem); color: var(--navy); letter-spacing: -.5px; }
+  .section-head p { color: var(--muted); margin-top: 14px; font-size: 16px; }
+
+  /* ---------- Stats strip ---------- */
+  .stats-strip {
+    background: #fff;
+    margin-top: -40px;
+    position: relative; z-index: 3;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    overflow: hidden;
+  }
+  .stat-cell { padding: 28px 22px; text-align: center; border-right: 1px solid var(--line); }
+  .stat-cell:last-child { border-right: none; }
+  .stat-cell .num { font-size: 30px; font-weight: 800; color: var(--navy); }
+  .stat-cell .num span { color: var(--gold); }
+  .stat-cell .lbl { font-size: 13.5px; color: var(--muted); margin-top: 4px; }
+
+  /* ---------- Modules ---------- */
+  .modules-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 26px; }
+  .module-card {
+    background: #fff;
+    border-radius: var(--radius);
+    padding: 30px 28px 28px;
+    box-shadow: var(--shadow);
+    border-top: 5px solid var(--mc, var(--navy));
+    position: relative;
+    transition: transform .2s, box-shadow .25s;
+    display: flex; flex-direction: column;
+  }
+  .module-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-hover); }
+  .module-icon {
+    width: 54px; height: 54px; border-radius: 14px;
+    display: grid; place-items: center;
+    background: var(--mc-soft, #eef3f8);
+    color: var(--mc, var(--navy));
+    margin-bottom: 18px;
+  }
+  .module-icon svg { width: 28px; height: 28px; }
+  .module-tag {
+    position: absolute; top: 26px; right: 26px;
+    font-size: 11.5px; font-weight: 700; letter-spacing: .5px;
+    color: var(--mc, var(--navy));
+    background: var(--mc-soft, #eef3f8);
+    padding: 4px 11px; border-radius: 999px;
+  }
+  .module-card h3 { font-size: 19px; color: var(--navy); margin-bottom: 8px; }
+  .module-card p { color: var(--muted); font-size: 14.5px; margin-bottom: 18px; flex-grow: 1; }
+  .module-link {
+    font-weight: 700; font-size: 14px; color: var(--mc, var(--navy));
+    display: inline-flex; align-items: center; gap: 7px;
+    transition: gap .2s;
+  }
+  .module-card:hover .module-link { gap: 12px; }
+
+  /* ---------- Problem / Value ---------- */
+  .pv-section { background: #fff; }
+  .pv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .pv-card { border-radius: var(--radius); padding: 32px; border: 1px solid var(--line); }
+  .pv-card.problem { background: #fdf0ee; border-color: #f6d5cf; }
+  .pv-card.value { background: #ecf7f0; border-color: #cdead9; }
+  .pv-card h3 { font-size: 19px; margin-bottom: 18px; color: var(--navy); display: flex; align-items: center; gap: 10px; }
+  .pv-list { list-style: none; }
+  .pv-list li {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 10px 0; font-size: 15px; color: #3d4a57;
+    border-bottom: 1px dashed rgba(0, 0, 0, .07);
+  }
+  .pv-list li:last-child { border-bottom: none; }
+  .pv-mark { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 800; color: #fff; margin-top: 2px; }
+  .problem .pv-mark { background: #c0392b; }
+  .value .pv-mark { background: #1E6B40; }
+
+  /* ---------- Roles ---------- */
+  .roles-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; }
+  .role-card {
+    background: #fff; border-radius: 14px; padding: 24px 18px; text-align: center;
+    box-shadow: var(--shadow); border: 1px solid var(--line);
+  }
+  .role-ico { width: 46px; height: 46px; margin: 0 auto 14px; border-radius: 12px; background: #eef3f8; color: var(--navy); display: grid; place-items: center; }
+  .role-card h4 { font-size: 15px; color: var(--navy); margin-bottom: 4px; }
+  .role-card .count { font-size: 12.5px; color: var(--accent); font-weight: 700; margin-bottom: 8px; }
+  .role-card p { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+
+  /* ---------- CTA band ---------- */
+  .cta-band {
+    background: linear-gradient(135deg, var(--navy), var(--navy-dark));
+    border-radius: 22px;
+    padding: 54px 40px;
+    text-align: center;
+    color: #fff;
+    box-shadow: var(--shadow);
+  }
+  .cta-band h2 { font-size: clamp(1.5rem, 3vw, 2rem); margin-bottom: 12px; }
+  .cta-band p { color: #cdd9e6; max-width: 540px; margin: 0 auto 28px; }
+
+  /* ---------- Footer ---------- */
+  footer {
+    background: var(--navy-dark);
+    color: #c5d1de;
+    padding: 56px 0 26px;
+  }
+  .footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 36px; padding-bottom: 34px; border-bottom: 1px solid rgba(255, 255, 255, .1); }
+  .footer-brand .brand-logo { margin-bottom: 14px; }
+  .footer-brand p { font-size: 14px; max-width: 320px; }
+  .footer-col h5 { color: #fff; font-size: 14px; letter-spacing: .5px; margin-bottom: 14px; text-transform: uppercase; }
+  .footer-col a, .footer-col p { display: block; font-size: 14px; padding: 5px 0; color: #b5c3d2; }
+  .footer-col a:hover { color: var(--gold); }
+  .footer-bottom { padding-top: 22px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; font-size: 13px; color: #8fa1b3; }
+  .footer-bottom .src { background: rgba(255,255,255,.06); padding: 4px 12px; border-radius: 999px; }
+
+  /* ---------- Reveal animation ---------- */
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 900px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 36px; }
+    .hero-card { max-width: 460px; }
+    .stats-strip { grid-template-columns: 1fr 1fr; }
+    .stat-cell:nth-child(2) { border-right: none; }
+    .stat-cell:nth-child(1), .stat-cell:nth-child(2) { border-bottom: 1px solid var(--line); }
+    .roles-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 720px) {
+    .nav-toggle { display: flex; }
+    .nav-links {
+      position: absolute; top: 66px; left: 0; right: 0;
+      flex-direction: column; align-items: stretch; gap: 2px;
+      background: var(--navy-dark); padding: 12px 16px 18px;
+      box-shadow: 0 14px 24px rgba(0,0,0,.25);
+      display: none;
+    }
+    .nav-links.open { display: flex; }
+    .nav-links a { padding: 12px 14px; }
+    .btn-login { margin-left: 0 !important; text-align: center; }
+    .modules-grid, .pv-grid { grid-template-columns: 1fr; }
+    section { padding: 56px 0; }
+  }
+  @media (max-width: 460px) {
+    .roles-grid { grid-template-columns: 1fr; }
+    .mini-stats { grid-template-columns: 1fr; }
+    .footer-grid { grid-template-columns: 1fr; gap: 26px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== Navbar ===== -->
+<header class="navbar">
+  <div class="container nav-inner">
+    <a href="#beranda" class="brand" aria-label="SIMPELM Beranda">
+      <span class="brand-logo">SP</span>
+      <span class="brand-text">
+        <strong>SIMPELM</strong>
+        <span>Dinas Pendidikan Kab. Deli Serdang</span>
+      </span>
+    </a>
+    <nav class="nav-links" id="navLinks">
+      <a href="#beranda">Beranda</a>
+      <a href="#modul">Modul</a>
+      <a href="#manfaat">Manfaat</a>
+      <a href="#pengguna">Pengguna</a>
+      <a href="#tentang">Tentang</a>
+      <a href="login.html" class="btn-login">Masuk</a>
+    </nav>
+    <button class="nav-toggle" id="navToggle" aria-label="Buka menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<!-- ===== Hero ===== -->
+<section class="hero" id="beranda" style="padding-bottom:120px;">
+  <div class="container hero-grid">
+    <div>
+      <span class="eyebrow"><span class="dot"></span> Kepmendikdasmen No. 126/P/2025</span>
+      <h1>Pusat Informasi <span class="accent">Pembelajaran Mendalam</span> Deli Serdang</h1>
+      <p class="lead">
+        SIMPELM — Sistem Informasi Pembelajaran Mendalam — menghubungkan Bimtek, pendampingan
+        sekolah, jadwal KKG daring, dan repositori modul ajar dalam satu pintu untuk
+        <strong>500+ SD</strong> di <strong>22 kecamatan</strong>.
+      </p>
+      <div class="hero-cta">
+        <a href="#modul" class="btn btn-primary">Jelajahi Modul →</a>
+        <a href="login.html" class="btn btn-ghost">Masuk sebagai Pengelola</a>
+      </div>
+    </div>
+    <div class="hero-card">
+      <h4>Implementasi PM dalam Angka</h4>
+      <div class="mini-stats">
+        <div class="mini-stat"><div class="num">22</div><div class="lbl">Kecamatan</div></div>
+        <div class="mini-stat"><div class="num">500+</div><div class="lbl">Sekolah Dasar</div></div>
+        <div class="mini-stat"><div class="num">4</div><div class="lbl">Modul Terpadu</div></div>
+        <div class="mini-stat"><div class="num">1</div><div class="lbl">Pintu Informasi</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Stats strip ===== -->
+<div class="container">
+  <div class="stats-strip reveal">
+    <div class="stat-cell"><div class="num"><span>500+</span></div><div class="lbl">SD Terkoordinasi</div></div>
+    <div class="stat-cell"><div class="num">22</div><div class="lbl">Kecamatan Terjangkau</div></div>
+    <div class="stat-cell"><div class="num">4</div><div class="lbl">Modul Implementasi PM</div></div>
+    <div class="stat-cell"><div class="num">100%</div><div class="lbl">Berbasis Ekosistem Google</div></div>
+  </div>
+</div>
+
+<!-- ===== Modules ===== -->
+<section id="modul">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="kicker">Empat Modul Utama</span>
+      <h2>Satu Sistem untuk Seluruh Aktivitas PM</h2>
+      <p>Setiap modul menjawab satu amanat Kepmendikdasmen 126/P/2025 — dari pelatihan, pendampingan, komunitas belajar, hingga modul ajar.</p>
+    </div>
+
+    <div class="modules-grid">
+      <!-- Modul 1 -->
+      <article class="module-card reveal" style="--mc:var(--m1); --mc-soft:#e7f0f8;">
+        <span class="module-tag">MODUL 1</span>
+        <div class="module-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        </div>
+        <h3>Bimtek &amp; Workshop PM</h3>
+        <p>Informasi kegiatan Bimbingan Teknis dan Workshop implementasi PM yang dikelola Admin Dinas — lengkap dengan link modul, PPT, dan video. Terbuka untuk publik.</p>
+        <a href="bimtek.html" class="module-link">Lihat kegiatan Bimtek →</a>
+      </article>
+
+      <!-- Modul 2 -->
+      <article class="module-card reveal" style="--mc:var(--m2); --mc-soft:#e6f2eb;">
+        <span class="module-tag">MODUL 2</span>
+        <div class="module-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <h3>Pendampingan Satuan Pendidikan</h3>
+        <p>Dokumentasi hasil kunjungan pendampingan PM oleh Pengawas / Ketua KKG Kecamatan ke sekolah, dengan ringkasan yang dapat dipantau pimpinan.</p>
+        <a href="pendampingan.html" class="module-link">Lihat pendampingan →</a>
+      </article>
+
+      <!-- Modul 3 -->
+      <article class="module-card reveal" style="--mc:var(--m3); --mc-soft:#fdf0e3;">
+        <span class="module-tag">MODUL 3</span>
+        <div class="module-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        </div>
+        <h3>Jadwal KKG Daring</h3>
+        <p>Jadwal belajar daring mingguan KKG terorganisir per kecamatan dan rayon, lengkap dengan tombol bergabung Google Meet langsung. Tanpa perlu login.</p>
+        <a href="kkg.html" class="module-link">Lihat jadwal KKG →</a>
+      </article>
+
+      <!-- Modul 4 -->
+      <article class="module-card reveal" style="--mc:var(--m4); --mc-soft:#f1e8f5;">
+        <span class="module-tag">MODUL 4</span>
+        <div class="module-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        </div>
+        <h3>Modul Ajar PM</h3>
+        <p>Repositori laporan tim KKG Sekolah — praktik pedagogis, pemanfaatan digital, serta link modul ajar dan asesmen sumatif karya guru-guru lokal Deli Serdang.</p>
+        <a href="modul-ajar.html" class="module-link">Lihat modul ajar →</a>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Problem / Value ===== -->
+<section class="pv-section" id="manfaat">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="kicker">Mengapa SIMPELM</span>
+      <h2>Dari Tersebar Menjadi Terpusat</h2>
+      <p>Mengganti koordinasi yang berserakan di WhatsApp dan spreadsheet terpisah dengan satu platform yang rapi dan mudah dipantau.</p>
+    </div>
+    <div class="pv-grid">
+      <div class="pv-card problem reveal">
+        <h3>Masalah yang Diselesaikan</h3>
+        <ul class="pv-list">
+          <li><span class="pv-mark">!</span> Tidak ada platform terpusat untuk dokumentasi PM</li>
+          <li><span class="pv-mark">!</span> Sulit memantau progres pendampingan 500+ SD</li>
+          <li><span class="pv-mark">!</span> Jadwal KKG daring tersebar di berbagai grup WA</li>
+          <li><span class="pv-mark">!</span> Tidak ada repositori modul ajar PM yang terstruktur</li>
+        </ul>
+      </div>
+      <div class="pv-card value reveal">
+        <h3>Nilai yang Dihasilkan</h3>
+        <ul class="pv-list">
+          <li><span class="pv-mark">✓</span> Satu pintu informasi PM Deli Serdang</li>
+          <li><span class="pv-mark">✓</span> Dashboard ringkasan untuk pimpinan</li>
+          <li><span class="pv-mark">✓</span> Jadwal &amp; link KKG terorganisir per rayon</li>
+          <li><span class="pv-mark">✓</span> Portofolio digital modul ajar PM lokal</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Roles ===== -->
+<section id="pengguna">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="kicker">Untuk Siapa</span>
+      <h2>Peran yang Terhubung dalam Satu Sistem</h2>
+      <p>Setiap peran memiliki akses dan tanggung jawab yang jelas — dari operator dinas hingga guru di sekolah.</p>
+    </div>
+    <div class="roles-grid">
+      <div class="role-card reveal">
+        <div class="role-ico"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+        <h4>Super Admin</h4>
+        <div class="count">1–2 orang</div>
+        <p>Operator IT Dinas — kelola akun, konten, dan konfigurasi sistem.</p>
+      </div>
+      <div class="role-card reveal">
+        <div class="role-ico"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6"/><rect x="12" y="7" width="3" height="10"/><rect x="17" y="13" width="3" height="4"/></svg></div>
+        <h4>Admin Dinas</h4>
+        <div class="count">2–3 orang</div>
+        <p>Staf Bidang PM — input kegiatan bimtek dan pantau dashboard.</p>
+      </div>
+      <div class="role-card reveal">
+        <div class="role-ico"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <h4>Pengawas / KKG Kec</h4>
+        <div class="count">22–44 orang</div>
+        <p>Laporan pendampingan dan atur jadwal KKG rayon.</p>
+      </div>
+      <div class="role-card reveal">
+        <div class="role-ico"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></div>
+        <h4>Ketua KKG Sekolah</h4>
+        <div class="count">500+ orang</div>
+        <p>Input laporan tim dan link modul ajar PM sekolah.</p>
+      </div>
+      <div class="role-card reveal">
+        <div class="role-ico"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+        <h4>Pengunjung Publik</h4>
+        <div class="count">Tidak terbatas</div>
+        <p>Guru, kepsek, masyarakat — lihat info bimtek &amp; jadwal KKG.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CTA ===== -->
+<section>
+  <div class="container">
+    <div class="cta-band reveal">
+      <h2>Mulai Gunakan SIMPELM Hari Ini</h2>
+      <p>Pengelola dapat masuk untuk menginput kegiatan, laporan, dan jadwal. Publik dapat langsung menjelajahi seluruh informasi PM tanpa login.</p>
+      <div class="hero-cta" style="justify-content:center;">
+        <a href="login.html" class="btn btn-primary">Masuk ke Sistem</a>
+        <a href="#modul" class="btn btn-ghost">Lihat Informasi Publik</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Footer ===== -->
+<footer id="tentang">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <span class="brand-logo">SP</span>
+        <p><strong style="color:#fff;">SIMPELM</strong> — Sistem Informasi Pembelajaran Mendalam, dikembangkan untuk mendukung implementasi PM di lingkungan Dinas Pendidikan Kabupaten Deli Serdang.</p>
+      </div>
+      <div class="footer-col">
+        <h5>Modul</h5>
+        <a href="bimtek.html">Bimtek &amp; Workshop</a>
+        <a href="pendampingan.html">Pendampingan</a>
+        <a href="kkg.html">Jadwal KKG Daring</a>
+        <a href="modul-ajar.html">Modul Ajar PM</a>
+      </div>
+      <div class="footer-col">
+        <h5>Kontak</h5>
+        <p>Dinas Pendidikan</p>
+        <p>Kabupaten Deli Serdang</p>
+        <p>Bidang Pembelajaran Mendalam</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Dinas Pendidikan Kabupaten Deli Serdang. Seluruh hak cipta dilindungi.</span>
+      <span class="src">Dasar: Kepmendikdasmen No. 126/P/2025</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Mobile nav toggle
+  const toggle = document.getElementById('navToggle');
+  const links = document.getElementById('navLinks');
+  toggle.addEventListener('click', () => links.classList.toggle('open'));
+  links.querySelectorAll('a').forEach(a =>
+    a.addEventListener('click', () => links.classList.remove('open'))
+  );
+
+  // Scroll reveal
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>

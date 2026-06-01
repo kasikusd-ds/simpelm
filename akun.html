@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Kelola Akun — SIMPELM</title>
+<link rel="stylesheet" href="assets/css/app.css" />
+</head>
+<body>
+<header id="navbar"></header>
+
+<section class="page-head" style="--ph:var(--role-super);">
+  <div class="container">
+    <span class="kicker">Super Admin</span>
+    <h1>Kelola Akun Pengguna</h1>
+    <p>Buat, nonaktifkan, dan reset password akun Admin Dinas, Pengawas, dan Ketua KKG Sekolah.</p>
+  </div>
+</section>
+
+<main class="page-body">
+  <div class="container">
+    <div class="toolbar">
+      <div class="grow"><label>Cari</label><input type="search" id="search" placeholder="Cari username atau nama…" /></div>
+      <div><label>Peran</label><select id="fRole"><option value="">Semua</option>
+        <option value="admin">Admin Dinas</option><option value="pengawas">Pengawas / KKG Kec</option>
+        <option value="kkg_sekolah">Ketua KKG Sekolah</option><option value="super_admin">Super Admin</option></select></div>
+      <button class="btn btn-gold" id="btnAdd">+ Tambah Akun</button>
+    </div>
+    <div id="table"></div>
+  </div>
+</main>
+
+<footer id="footer"></footer>
+
+<div class="modal-overlay" id="formModal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="fTitle">Tambah Akun</h3><button class="modal-close" data-close>&times;</button></div>
+    <form id="form">
+      <div class="modal-body">
+        <input type="hidden" id="id" />
+        <div class="form-grid">
+          <div class="field"><label>Username <span class="req">*</span></label><input id="username" required /></div>
+          <div class="field" id="pwField"><label>Password Awal <span class="req">*</span></label><input id="password" placeholder="min. 8 karakter" /></div>
+        </div>
+        <div class="field"><label>Nama Lengkap <span class="req">*</span></label><input id="nama_lengkap" required /></div>
+        <div class="field"><label>Peran <span class="req">*</span></label>
+          <select id="role" required>
+            <option value="admin">Admin Dinas</option>
+            <option value="pengawas">Pengawas / Ketua KKG Kecamatan</option>
+            <option value="kkg_sekolah">Ketua KKG Sekolah</option>
+            <option value="super_admin">Super Admin</option>
+          </select>
+        </div>
+        <div class="form-grid">
+          <div class="field"><label>Kecamatan</label><input id="kecamatan" placeholder="cth: Percut Sei Tuan" /></div>
+          <div class="field"><label>Sekolah</label><input id="sekolah" placeholder="khusus Ketua KKG Sekolah" /></div>
+        </div>
+      </div>
+      <div class="modal-foot"><button type="button" class="btn btn-ghost btn-sm" data-close>Batal</button><button type="submit" class="btn btn-primary btn-sm">Simpan</button></div>
+    </form>
+  </div>
+</div>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+  let all = [];
+  const ROLE_LABEL = { super_admin:"Super Admin", admin:"Admin Dinas", pengawas:"Pengawas / KKG Kec", kkg_sekolah:"Ketua KKG Sekolah" };
+  const ROLE_CHIP = { super_admin:"chip-purple", admin:"chip-blue", pengawas:"chip-green", kkg_sekolah:"chip-orange" };
+
+  const sess = requireAuth(["super_admin"]);
+  if (sess) {
+    document.addEventListener("DOMContentLoaded", () => {
+      setupModals();
+      document.getElementById("search").addEventListener("input", render);
+      document.getElementById("fRole").addEventListener("change", load);
+      document.getElementById("btnAdd").addEventListener("click", () => openForm());
+      document.getElementById("form").addEventListener("submit", save);
+      load();
+    });
+  }
+
+  async function load() {
+    UI.loading(true);
+    try {
+      const role = document.getElementById("fRole").value;
+      all = await API.call("listUsers", role ? { role } : {}, { auth: true });
+      render();
+    } catch (err) { UI.toast(err.message, "error", 4000); }
+    finally { UI.loading(false); }
+  }
+
+  function render() {
+    const q = document.getElementById("search").value.toLowerCase().trim();
+    let rows = all.filter(u => !q || `${u.username} ${u.nama_lengkap}`.toLowerCase().includes(q));
+    const cols = [
+      { key: "username", label: "Username" },
+      { key: "nama_lengkap", label: "Nama Lengkap" },
+      { key: "role", label: "Peran", render: r => `<span class="chip ${ROLE_CHIP[r.role]||"chip-gray"}">${ROLE_LABEL[r.role]||r.role}</span>` },
+      { key: "kecamatan", label: "Kecamatan/Sekolah", render: r => escapeHtml([r.kecamatan, r.sekolah].filter(Boolean).join(" / ") || "-") },
+      { key: "status", label: "Status", render: r => `<span class="chip ${String(r.status).toLowerCase()==="nonaktif"?"chip-inactive":"chip-active"}">${escapeHtml(r.status||"aktif")}</span>` },
+      { key: "_act", label: "Aksi", render: r => `<div class="table-actions">
+          <button class="btn btn-ghost btn-sm" data-edit="${r.id}">Edit</button>
+          <button class="btn btn-ghost btn-sm" data-toggle="${r.id}">${String(r.status).toLowerCase()==="nonaktif"?"Aktifkan":"Nonaktifkan"}</button>
+          <button class="btn btn-ghost btn-sm" data-reset="${r.id}">Reset PW</button>
+        </div>` }
+    ];
+    new DataTable({ mount: "#table", columns: cols, rows, emptyText: "Belum ada akun." });
+    const t = document.getElementById("table");
+    t.querySelectorAll("[data-edit]").forEach(el=>el.onclick=()=>openForm(el.dataset.edit));
+    t.querySelectorAll("[data-toggle]").forEach(el=>el.onclick=()=>toggle(el.dataset.toggle));
+    t.querySelectorAll("[data-reset]").forEach(el=>el.onclick=()=>resetPw(el.dataset.reset));
+  }
+
+  function openForm(id) {
+    document.getElementById("form").reset();
+    document.getElementById("id").value = "";
+    document.getElementById("username").disabled = false;
+    document.getElementById("pwField").style.display = "";
+    document.getElementById("fTitle").textContent = "Tambah Akun";
+    if (id) {
+      const u = all.find(x => x.id == id);
+      document.getElementById("fTitle").textContent = "Edit Akun";
+      document.getElementById("id").value = u.id;
+      document.getElementById("username").value = u.username;
+      document.getElementById("username").disabled = true;
+      document.getElementById("pwField").style.display = "none";
+      document.getElementById("nama_lengkap").value = u.nama_lengkap;
+      document.getElementById("role").value = u.role;
+      document.getElementById("kecamatan").value = u.kecamatan || "";
+      document.getElementById("sekolah").value = u.sekolah || "";
+    }
+    show("formModal");
+  }
+
+  async function save(e) {
+    e.preventDefault();
+    const id = document.getElementById("id").value;
+    const data = {
+      id, username: document.getElementById("username").value.trim(),
+      password: document.getElementById("password").value,
+      nama_lengkap: document.getElementById("nama_lengkap").value.trim(),
+      role: document.getElementById("role").value,
+      kecamatan: document.getElementById("kecamatan").value.trim(),
+      sekolah: document.getElementById("sekolah").value.trim()
+    };
+    if (!id && data.password.length < 8) return UI.toast("Password awal minimal 8 karakter.", "error");
+    UI.loading(true);
+    try { await API.call("saveUser", { data }, { auth: true }); hideAll(); UI.toast("Akun tersimpan.", "success"); await load(); }
+    catch (err) { UI.toast(err.message, "error", 4000); }
+    finally { UI.loading(false); }
+  }
+
+  async function toggle(id) {
+    UI.loading(true);
+    try { const r = await API.call("toggleUser", { id }, { auth: true }); UI.toast("Status: " + r.status, "success"); await load(); }
+    catch (err) { UI.toast(err.message, "error", 4000); }
+    finally { UI.loading(false); }
+  }
+
+  async function resetPw(id) {
+    const u = all.find(x => x.id == id);
+    if (!(await UI.confirm(`Reset password ${u.username} ke password default?`, { okLabel: "Reset", danger: false }))) return;
+    UI.loading(true);
+    try { const r = await API.call("resetPassword", { id }, { auth: true }); UI.toast("Password direset ke: " + r.defaultPassword, "success", 6000); }
+    catch (err) { UI.toast(err.message, "error", 4000); }
+    finally { UI.loading(false); }
+  }
+
+  function show(id){ document.getElementById(id).classList.add("show"); }
+  function hideAll(){ document.querySelectorAll(".modal-overlay").forEach(m=>m.classList.remove("show")); }
+  function setupModals(){
+    document.querySelectorAll("[data-close]").forEach(b=>b.onclick=hideAll);
+    document.querySelectorAll(".modal-overlay").forEach(ov=>ov.addEventListener("click",e=>{if(e.target===ov)hideAll();}));
+  }
+</script>
+</body>
+</html>
