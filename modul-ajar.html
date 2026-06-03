@@ -242,7 +242,11 @@
   function hideAll(){ document.querySelectorAll(".modal-overlay").forEach(m=>m.classList.remove("show")); }
   function setupModals(){
     document.querySelectorAll("[data-close]").forEach(b=>b.onclick=hideAll);
-    document.querySelectorAll(".modal-overlay").forEach(ov=>ov.addEventListener("click",e=>{if(e.target===ov)hideAll();}));
+    document.querySelectorAll(".modal-overlay").forEach(ov=>{
+      let downOnOverlay=false;
+      ov.addEventListener("mousedown",e=>{ downOnOverlay=(e.target===ov); });
+      ov.addEventListener("click",e=>{ if(e.target===ov && downOnOverlay && !ov.querySelector("input, textarea, select")) hideAll(); });
+    });
   }
 </script>
 </body>
