@@ -24,6 +24,8 @@
       <div><label>Peran</label><select id="fRole"><option value="">Semua</option>
         <option value="admin">Admin Dinas</option><option value="pengawas">Pengawas / KKG Kec</option>
         <option value="kkg_sekolah">Ketua KKG Sekolah</option><option value="super_admin">Super Admin</option></select></div>
+      <button class="btn btn-ghost" id="btnGenerate">⚡ Generate dari Data Master</button>
+      <button class="btn btn-ghost" id="btnImport">⬆ Import CSV</button>
       <button class="btn btn-gold" id="btnAdd">+ Tambah Akun</button>
     </div>
     <div id="table"></div>
@@ -61,6 +63,59 @@
   </div>
 </div>
 
+<!-- Modal Import CSV -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Import Akun dari CSV</h3><button class="modal-close" data-close>&times;</button></div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:#5b6876;margin-bottom:12px">
+        Unggah file <b>CSV</b> dengan kolom (baris pertama = judul):
+        <code style="display:block;background:#f6f8fb;padding:8px 10px;border-radius:8px;margin-top:6px;font-size:12.5px">username,password,role,nama_lengkap,kecamatan,sekolah</code>
+      </p>
+      <p style="font-size:12.5px;color:#5b6876;margin-bottom:14px">
+        • <b>role</b> diisi: <code>admin</code>, <code>pengawas</code>, atau <code>kkg_sekolah</code>.<br>
+        • Kolom <b>password</b> boleh dikosongkan → sistem membuat otomatis.<br>
+        • Username yang sudah ada akan dilewati.
+      </p>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnTemplate" style="margin-bottom:16px">⬇ Unduh Template CSV</button>
+
+      <div class="field"><label>Pilih file CSV <span class="req">*</span></label><input type="file" id="csvFile" accept=".csv,text/csv" /></div>
+      <div class="field"><label>Password awal (opsional)</label><input id="impPwd" placeholder="kosongkan = acak per akun" /><div class="hint">Jika diisi, semua akun pada file ini memakai password ini (wajib diganti saat login pertama).</div></div>
+      <div id="impPreview" class="text-muted" style="font-size:13px"></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost btn-sm" data-close>Batal</button>
+      <button type="button" class="btn btn-primary btn-sm" id="btnDoImport" disabled>Proses Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Generate dari Master -->
+<div class="modal-overlay" id="genModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Generate Akun dari Data Master</h3><button class="modal-close" data-close>&times;</button></div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:#5b6876;margin-bottom:14px">
+        Membuat akun otomatis dari tab <b>3_Sekolah</b> &amp; <b>2_Kecamatan</b>. Akun yang sudah ada dilewati,
+        jadi aman dijalankan ulang. Daftar username &amp; password tersimpan di tab <b>_Kredensial</b> untuk dibagikan.
+      </p>
+      <label style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;font-size:14px;cursor:pointer">
+        <input type="checkbox" id="genKKG" checked style="width:auto;margin-top:3px">
+        <span><b>Ketua KKG Sekolah</b> — 1 akun per sekolah aktif. Username <code>kkg&lt;NPSN&gt;</code>, password awal = NPSN.</span>
+      </label>
+      <label style="display:flex;gap:10px;align-items:flex-start;margin-bottom:16px;font-size:14px;cursor:pointer">
+        <input type="checkbox" id="genPengawas" checked style="width:auto;margin-top:3px">
+        <span><b>Pengawas</b> — 1 akun per kecamatan. Username <code>pengawas.&lt;kecamatan&gt;</code>.</span>
+      </label>
+      <div class="field"><label>Samakan password awal semua akun (opsional)</label><input id="genPwd" placeholder="cth: Guru#2026 — kosongkan untuk default per peran" /><div class="hint">Kosong = KKG pakai NPSN, Pengawas pakai password acak. Apa pun pilihannya, semua wajib diganti saat login pertama.</div></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost btn-sm" data-close>Batal</button>
+      <button type="button" class="btn btn-gold btn-sm" id="btnDoGen">Generate Sekarang</button>
+    </div>
+  </div>
+</div>
+
 <script src="assets/js/config.js"></script>
 <script src="assets/js/app.js"></script>
 <script>
@@ -76,6 +131,12 @@
       document.getElementById("fRole").addEventListener("change", load);
       document.getElementById("btnAdd").addEventListener("click", () => openForm());
       document.getElementById("form").addEventListener("submit", save);
+      document.getElementById("btnImport").addEventListener("click", () => { resetImport(); show("importModal"); });
+      document.getElementById("btnGenerate").addEventListener("click", () => show("genModal"));
+      document.getElementById("btnTemplate").addEventListener("click", downloadTemplate);
+      document.getElementById("csvFile").addEventListener("change", previewCsv);
+      document.getElementById("btnDoImport").addEventListener("click", doImport);
+      document.getElementById("btnDoGen").addEventListener("click", doGenerate);
       load();
     });
   }
@@ -167,6 +228,124 @@
     finally { UI.loading(false); }
   }
 
+  /* ---------- Import CSV ---------- */
+  let parsedRecords = [];
+  const CSV_HEADERS = ["username","password","role","nama_lengkap","kecamatan","sekolah"];
+
+  function resetImport() {
+    parsedRecords = [];
+    document.getElementById("csvFile").value = "";
+    document.getElementById("impPwd").value = "";
+    document.getElementById("impPreview").innerHTML = "";
+    document.getElementById("btnDoImport").disabled = true;
+  }
+
+  function downloadTemplate() {
+    const sample = CSV_HEADERS.join(",") + "\n" +
+      "admin.budi,,admin,Budi Santoso,,\n" +
+      "pengawas.lubukpakam,,pengawas,Pak Darmawan,Lubuk Pakam,\n" +
+      "kkg10213001,,kkg_sekolah,Bu Rina,Percut Sei Tuan,SDN 101 Deli Serdang\n";
+    downloadFile("template_akun_simpelm.csv", sample);
+  }
+
+  // Parser CSV ringan (mendukung tanda kutip & koma di dalam field)
+  function parseCSV(text) {
+    const rows = []; let row = [], field = "", inQ = false;
+    text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inQ) {
+        if (c === '"') { if (text[i+1] === '"') { field += '"'; i++; } else inQ = false; }
+        else field += c;
+      } else {
+        if (c === '"') inQ = true;
+        else if (c === ",") { row.push(field); field = ""; }
+        else if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
+        else field += c;
+      }
+    }
+    if (field.length || row.length) { row.push(field); rows.push(row); }
+    return rows.filter(r => r.some(c => String(c).trim() !== ""));
+  }
+
+  function previewCsv() {
+    const file = document.getElementById("csvFile").files[0];
+    const out = document.getElementById("impPreview");
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const rows = parseCSV(reader.result);
+        if (rows.length < 2) throw new Error("File kosong atau hanya berisi judul kolom.");
+        const head = rows[0].map(h => slugHeader(h));
+        const idx = {}; CSV_HEADERS.forEach(h => idx[h] = head.indexOf(h));
+        if (idx.username < 0 || idx.role < 0 || idx.nama_lengkap < 0)
+          throw new Error("Kolom wajib (username, role, nama_lengkap) tidak ditemukan.");
+        parsedRecords = rows.slice(1).map(r => ({
+          username: cell(r, idx.username), password: cell(r, idx.password), role: cell(r, idx.role),
+          nama_lengkap: cell(r, idx.nama_lengkap), kecamatan: cell(r, idx.kecamatan), sekolah: cell(r, idx.sekolah)
+        })).filter(x => x.username);
+        out.innerHTML = `<b style="color:var(--m2)">✓ ${parsedRecords.length} akun</b> siap diimpor.`;
+        document.getElementById("btnDoImport").disabled = parsedRecords.length === 0;
+      } catch (e) {
+        out.innerHTML = `<b style="color:var(--danger)">✗ ${escapeHtml(e.message)}</b>`;
+        document.getElementById("btnDoImport").disabled = true;
+      }
+    };
+    reader.readAsText(file, "UTF-8");
+  }
+  function cell(r, i) { return i >= 0 && r[i] !== undefined ? String(r[i]).trim() : ""; }
+  function slugHeader(h) { return String(h || "").trim().toLowerCase().replace(/\s+/g, "_"); }
+
+  async function doImport() {
+    if (!parsedRecords.length) return;
+    const defaultPassword = document.getElementById("impPwd").value.trim();
+    UI.loading(true);
+    try {
+      const res = await API.call("bulkCreateUsers", { records: parsedRecords, defaultPassword }, { auth: true });
+      finishBatch(res, "Import");
+    } catch (err) { UI.toast(err.message, "error", 5000); }
+    finally { UI.loading(false); }
+  }
+
+  /* ---------- Generate dari Master ---------- */
+  async function doGenerate() {
+    const includeKKG = document.getElementById("genKKG").checked;
+    const includePengawas = document.getElementById("genPengawas").checked;
+    if (!includeKKG && !includePengawas) return UI.toast("Pilih minimal satu jenis akun.", "info");
+    if (!(await UI.confirm("Generate akun dari data master sekarang? Akun yang sudah ada akan dilewati.", { okLabel: "Generate", danger: false }))) return;
+    const defaultPassword = document.getElementById("genPwd").value.trim();
+    UI.loading(true);
+    try {
+      const res = await API.call("generateFromMaster", { includeKKG, includePengawas, defaultPassword }, { auth: true });
+      finishBatch(res, "Generate");
+    } catch (err) { UI.toast(err.message, "error", 5000); }
+    finally { UI.loading(false); }
+  }
+
+  // Tampilkan hasil + tawarkan unduh kredensial
+  function finishBatch(res, label) {
+    hideAll();
+    let msg = `${label} selesai: ${res.created} akun dibuat, ${res.skipped} dilewati (sudah ada).`;
+    UI.toast(msg, "success", 6000);
+    if (res.errors && res.errors.length) UI.toast(res.errors.length + " baris dilewati karena galat. Cek format.", "error", 6000);
+    if (res.credentials && res.credentials.length) {
+      const csv = "username,password_awal,role,nama_lengkap,kecamatan,sekolah\n" +
+        res.credentials.map(c => [c.username, c.password_awal, c.role, c.nama_lengkap, c.kecamatan, c.sekolah]
+          .map(v => `"${String(v||"").replace(/"/g,'""')}"`).join(",")).join("\n");
+      downloadFile("kredensial_akun_" + Date.now() + ".csv", csv);
+      UI.toast("Daftar kredensial diunduh & tersimpan di tab _Kredensial.", "info", 7000);
+    }
+    load();
+  }
+
+  function downloadFile(name, content) {
+    const blob = new Blob(["﻿" + content], { type: "text/csv;charset=utf-8;" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
   function show(id){ document.getElementById(id).classList.add("show"); }
   function hideAll(){ document.querySelectorAll(".modal-overlay").forEach(m=>m.classList.remove("show")); }
   function setupModals(){
